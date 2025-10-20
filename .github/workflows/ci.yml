@@ -51,18 +51,11 @@ jobs:
         uses: zaproxy/action-baseline@v0.10.0
         with:
           target: 'http://localhost:3000'
-          allow_issue_writing: false     # evita el error de permisos
-          fail_action: false             # no falla por warnings
-          cmd_options: '-a -m 1'         # modo activo, escaneo breve
+          allow_issue_writing: false   # no intenta crear issues
+          fail_action: false           # no falla por alerts/warnings
+          cmd_options: '-a -m 1'
+          artifact_name: zapreport     # <- nombre válido para el artefacto
 
       - name: Parar contenedor
         if: always()
         run: docker rm -f segura-app || true
-
-  # Ejemplo de despliegue (opcional)
-  # deploy:
-  #   needs: build_test_scan
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Placeholder de despliegue
-  #       run: echo "Implementa aquí tu comando/acción de despliegue a entorno de pruebas"
