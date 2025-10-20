@@ -47,11 +47,12 @@ jobs:
           done
           echo "La app no respondió al /health" && exit 1
 
-      # Creamos carpeta dedicada para los reportes
+      # --- ZAP ---
       - name: Preparar carpeta de reportes ZAP
-        run: mkdir -p zap-reports
+        run: |
+          mkdir -p zap-reports
+          chmod 777 zap-reports
 
-      # Ejecutamos ZAP apuntando a la carpeta montada zap-reports
       - name: OWASP ZAP baseline (docker)
         run: |
           docker run --rm \
@@ -64,18 +65,35 @@ jobs:
               -r report_html.html \
               -a -m 1 || true
 
-      # Comprobación opcional (útil para depurar si hiciera falta)
-      - name: Listar reportes generados
+      - name: Listar posibles ubicaciones de reportes
         run: |
+          echo "== Contenido de zap-reports/ =="
           ls -lah zap-reports || true
+          echo "== Contenido de la raíz del workspace =="
+          ls -lah . || true
 
-      # Subimos todo lo que haya en zap-reports como artefacto
-      - name: Publicar reporte ZAP
+      # Subimos primero desde zap-reports; si no hay, probamos la raíz como respaldo
+      - name: Publicar reporte ZAP (carpeta dedicada)
         uses: actions/upload-artifact@v4
         with:
           name: zap-report
-          path: zap-reports/**
-          if-no-files-found: error
+          path: |
+            zap-reports/report_html.html
+            zap-reports/report_md.md
+            zap-reports/report_json.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Publicar reporte ZAP (fallback raíz)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report-root
+          path: |
+            report_html.html
+            report_md.md
+            report_json.json
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Parar contenedor
