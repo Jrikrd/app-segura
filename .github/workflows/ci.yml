@@ -47,14 +47,30 @@ jobs:
           done
           echo "La app no respondió al /health" && exit 1
 
-      - name: OWASP ZAP baseline scan
-        uses: zaproxy/action-baseline@v0.10.0
+      # --- ZAP ejecutado directamente con Docker (sin action) ---
+      - name: OWASP ZAP baseline (docker)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/zap/wrk/:rw" \
+            --network=host \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://localhost:3000 \
+              -J report_json.json \
+              -w report_md.md \
+              -r report_html.html \
+              -a -m 1 || true
+
+      # Publicamos los reportes manualmente para evitar el error de artifacts
+      - name: Publicar reporte ZAP
+        uses: actions/upload-artifact@v4
         with:
-          target: 'http://localhost:3000'
-          allow_issue_writing: false   # no intenta crear issues
-          fail_action: false           # no falla por alerts/warnings
-          cmd_options: '-a -m 1'
-          artifact_name: zapreport     # <- nombre válido para el artefacto
+          name: zap-report
+          path: |
+            report_json.json
+            report_md.md
+            report_html.html
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Parar contenedor
         if: always()
